@@ -1,110 +1,217 @@
-[![Abcdspec-compliant](https://img.shields.io/badge/ABCD_Spec-v1.1-green.svg)](https://github.com/brain-life/abcd-spec)
-[![Run on Brainlife.io](https://img.shields.io/badge/Brainlife-brainlife.app.279-blue.svg)](https://doi.org/10.25663/brainlife.app.279)
+<h1 align="center">ROI to ROI Tracking</h1>
 
-# ROI to ROI Tracking 
+<p align="center">
+  Streamlines between pairs of regions of interest, tracked with an ensemble of MRtrix 0.2 probabilistic CSD runs, as a tractogram and a white matter classification.
+</p>
 
-This app will perform ensemble tracking between 2 or more cortical regions of interest (ROIs) from either a freesurfer parcellation or an atlas parcellation. This app uses MrTrix0.2.12's streamtrack probabilistic tracking functionality to track between pairs of ROIs. This app takes in the following required inputs: DWI, rois, Freesurfer. Optionally, a user can input precomputed CSDs, brainmask, and white matter masks. If these inputs are not provided, the app will generate these datatypes internally and output the derivatives. This is why the Freesurfer is a required input. If the CSD is computed internally, the derivatives will be outputted as a CSD datatype. If the user inputs the CSD, the files are copied over as a CSD datatype output.
+<p align="center">
+  <a href="https://github.com/brainlife/abcd-spec"><img src="https://img.shields.io/badge/ABCD_Spec-v1.1-green.svg" alt="ABCD Spec v1.1"></a>
+  <a href="https://doi.org/10.25663/brainlife.app.279"><img src="https://img.shields.io/badge/Brainlife-brainlife.app.279-blue.svg" alt="Run on brainlife.io"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-lightgrey.svg" alt="MIT license"></a>
+</p>
 
-To specify which ROIs are desired, the user can specify each pair as the ROI numbers found in the ROI datatype seperated by a space. For example, if the user wanted to track between ROIs 0001 and 0002 from their ROIs datatype, the user should input 0001 0002 in the roiPair field. The first value will generally be treated as the seed ROI and the second as the termination ROI. However, the user can specify seeding in both ROIs by setting the 'multiple_seeds' field to true. If the user wants to make multiple tracks, enter the user can input multiple pairs by creating a new line in the roiPair field. The output classification structure will then contain the same number of tracks as ROI pairs.
+> 📍 **This branch, `1.4`, runs 2 brainlife.io Apps** that share the same code:
+>
+> - ROI to ROI Tracking - with dtiInit ([doi:10.25663/brainlife.app.333](https://doi.org/10.25663/brainlife.app.333)) (deprecated)
+> - ROI to ROI Tracking - MRTrix 0.2.12 ([doi:10.25663/brainlife.app.279](https://doi.org/10.25663/brainlife.app.279))
+>
+> The other Apps in this repository are listed under **Versions on brainlife.io** below.
 
-This app provides the user with a large number of exposed parameters to guide and shape tractography. These include a maximum spherical harmonic order (lmax), number of repetitions, minimum and maximum length of streamlines, step size, maximum number of attempts, streamline count, FOD cutoff, and minimum radius of curvature. For lmax, the user can specify whether or not to track on a single lmax or 'ensemble' across lmax's. If the user wants to track in just a single lmax, set the 'single_lmax' field to true. Else, leave as false. If the user does not know which lmax to use, they can leave the 'max_lmax' field empty and the app will automatically calculate the maximum lmax based on the number of unique directions in the non-b0 weighted volumes of the DWI. For FOD cutoff, minimum radius of curvature, and step size, the user can input multiple values to perform 'ensemble tracking'. If this is desired, the user can input each value separated by a space in the respective fields (example: 0.25 0.5). The outputs of each iteration will be merged together in the final output.
+## 🧠 At a glance
 
-This app requires the ROIs and DWI datatypes to have the same dimensions. If the ROIs were generated with the 'Generate ROIs in dMRI space' app, then the ROIs and DWI will have the same dimensions. If another app was used to generate the ROIs input, the user will need to set the 'reslice' field to true. This will reslice the ROIs to have the same dimensions as the DWI image. This also assumes proper alignment between the DWI image and the ROIs.
-This app uses multiple software packages, including Freesurfer, MrTrix0.2.12, Matlab, and python. 
+<!-- brainlife-app:begin (generated from the App manifest; edit the manifest, not this block) -->
 
-### Authors 
+> **Tracks streamlines between pairs of ROIs with MRtrix 0.2 probabilistic CSD tractography (ensemble over lmax and curvature) and outputs a tractogram and classification.**
 
-- Brad Caron (bacaron@iu.edu)
-- Ilaria Sani (isani01@rockefeller.edu) 
+Builds a white matter mask from FreeSurfer aparc+aseg (unless one is given), fits or reuses CSD, and runs MRtrix 0.2 streamtrack between each ROI pair in roiPair, then merges the tracks into a .tck and a white matter classification with surfaces for viewing. ROIs must match the DWI's dimensions unless reslice is set. Needs DWI, ROIs and FreeSurfer; CSD, brain mask and white matter mask are optional.
 
-### Contributors 
+| | |
+|---|---|
+| 📥 **Inputs** | `neuro/dwi` · `neuro/rois` · `neuro/freesurfer` · `neuro/csd` (optional) · `neuro/mask` (optional) ×2 |
+| 📤 **Outputs** | `neuro/wmc` · `neuro/track/tck` · `neuro/csd` |
+| 🐳 **Container** | `brainlife/freesurfer-mini:6.0.1` |
+| ⚙️ **Resources** | 8 CPUs · 36 h walltime |
+| 🔑 **Requires** | `FREESURFER_LICENSE` |
+| 🔗 **Run it** | [doi.org/10.25663/brainlife.app.279](https://doi.org/10.25663/brainlife.app.279) |
 
-- Soichi Hayashi (hayashis@iu.edu) 
+#### 📥 Inputs
 
-### Funding 
+| Input | Datatype | Required | Description |
+|---|---|---|---|
+| `dwi` | `neuro/dwi` | yes | The path to the DWI datatype |
+| `rois` | `neuro/rois` | yes | The path to the ROIs datatype |
+| `freesurfer` | `neuro/freesurfer` | yes | aparc+aseg.nii.gz from freesurfer is used to create the white matter mask. You can override this by setting white_matter input, but you still need to input freesurfer as it is used to generate the visualization content (surface overlay) |
+| `csd` | `neuro/csd` | no | The path to the csd datatype |
+| `brainmask` | `neuro/mask` | no | The path to the mask datatype containing the brainmask of the DWI |
+| `white_matter` | `neuro/mask` | no | Specify white matter mask you'd like to use - instead of creating one on the fly from the freesurfer input. |
 
-[![NSF-BCS-1734853](https://img.shields.io/badge/NSF_BCS-1734853-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1734853)
-[![NSF-BCS-1636893](https://img.shields.io/badge/NSF_BCS-1636893-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1636893)
-[![NSF-ACI-1916518](https://img.shields.io/badge/NSF_ACI-1916518-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1916518)
-[![NSF-IIS-1912270](https://img.shields.io/badge/NSF_IIS-1912270-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1912270)
-[![NIH-NIBIB-R01EB029272](https://img.shields.io/badge/NIH_NIBIB-R01EB029272-green.svg)](https://grantome.com/grant/NIH/R01-EB029272-01)
+#### 📤 Outputs
 
-### Citations 
+| Output | Datatype | Description |
+|---|---|---|
+| `wmc` | `neuro/wmc` | The classification structure including a classification.mat structure that contains the streamline indices in the tractogram. |
+| `track` | `neuro/track/tck` | Tractogram (tck) generated |
+| `csd` | `neuro/csd` | FOD images generated by mrtrix |
 
-Please cite the following articles when publishing papers that used data, code or other resources created by the brainlife.io community. 
+<details>
+<summary><b>⚙️ Parameters</b> (13)</summary>
 
-1. Fibre-tracking was performed using the MRtrix package (J-D Tournier, Brain Research Institute, Melbourne, Australia, http://www.brain.org.au/software/) (Tournier et al. 2012)
-2. Tournier JD, Calamante F, Gadian DG, Connelly A Direct estimation of the fiber orientation density function from diffusion-weighted MRI data using spherical deconvolution Neuroimage 2004; 23 (3): 1176-1185
-3. Tournier JD, Calamante F, Connelly A MRtrix: diffusion tractography in crossing fibre regions International Journal of Imaging Systems and Technology 2012; in press, DOI: 10.1002/ima.22005 
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `max_lmax` | number |  | Max numb of params for CSD. Leave empty if you know it. |
+| `num_repetitions` | number | `1` | This allows you to track multiple times the very same tract. |
+| `roiPair` | string |  | Space-separated pairing of 2 ROI numbers or ROI names you'd like to track between. For number "ROI" will be prefixed to search for the roi file (rois/ROI<num>.nii.gz). If not number, then the name is assumed to be rois/<name>.nii.gz example: 45 54 L_FEF_sphere_bin L_PIT_sphere_bin |
+| `maxlength` | number | `200` | maximum length of each streamline generated |
+| `minlength` | number | `10` | minimum length of each streamline generated |
+| `stepsize` | number | `0.2` | step size for tracking |
+| `max_num` | number | `1000000` | maximum number of tracts to generate. if empty, mrtrix2 automatically sets to 100 times num_fibers |
+| `num_fibers` | number | `500000` | desired number of fibers per tracking output |
+| `curv` | string | `0.25 0.5 1 2 4` | minimum radius of curvature |
+| `single_lmax` | boolean | `false` | Using a single (max) lmax instead of tracking with multiple lmax between 2 and max lmax. |
+| `multiple_seed` | boolean | `false` | If you want to use multiple rois for seeding, select true |
+| `reslice` | boolean | `false` | reslice the input rois so that dimensions of them will match that of input dwi. |
+| `cutoff` | number | `0.1` | set the FA or FOD amplitude cutoff for terminating tracks. |
 
-## Running the App 
+</details>
 
-### On Brainlife.io 
+<!-- brainlife-app:end -->
 
-You can submit this App online at [https://doi.org/10.25663/brainlife.app.279](https://doi.org/10.25663/brainlife.app.279) via the 'Execute' tab. 
+## 🏷️ Versions on brainlife.io
 
-### Running Locally (on your machine) 
+| Version | Diffusion input | Branch | Run it | Status |
+|---|---|---|---|---|
+| **ROI to ROI Tracking - MRTrix 0.2.12** (this branch) | `neuro/dwi` | [`1.4`](https://github.com/brainlife/app-roi2roitracking/tree/1.4) | [doi:10.25663/brainlife.app.279](https://doi.org/10.25663/brainlife.app.279) | current |
+| **ROI to ROI Tracking - with dtiInit** (this branch) | `neuro/dtiinit` | [`1.4`](https://github.com/brainlife/app-roi2roitracking/tree/1.4) | [doi:10.25663/brainlife.app.333](https://doi.org/10.25663/brainlife.app.333) | deprecated |
+| ROI to ROI Tracking - deprecated | `neuro/dtiinit` | [`1.0`](https://github.com/brainlife/app-roi2roitracking/tree/1.0) | [doi:10.25663/bl.app.34](https://doi.org/10.25663/bl.app.34) | deprecated |
 
-1. git clone this repo 
+## 🔬 How it works
 
-2. Inside the cloned directory, create `config.json` with something like the following content with paths to your input files. 
+The App performs ensemble tracking between two or more regions of interest (ROIs), for example cortical regions from a FreeSurfer or atlas parcellation (such as those made by the ROI generation App).
 
-```json 
-{
-   "dwi":    "testdata/dwi/dwi.nii.gz",
-   "bvals":    "testdata/dwi/dwi.bvals",
-   "bvecs":    "testdata/dwi/dwi.bvals",
-   "lmax2":    "testdata/csd/lmax2.nii.gz/",
-   "rois":    "testdata/rois/rois/",
-   "anat":    "testdata/anat/t1.nii.gz",
-   "minlength":    10,
-   "maxlength":    200,
-   "max_lmax":    8,
-   "cutoff":    "0.025",
-   "roiPair":    "001 0002",
-   "stepsize":    "0.25",
-   "num_fibers":    500,
-   "curv":    "45",
-   "max_num":    100000,
-   "single_lmax":    true,
-   "reslice":    false,
-   "multiple_seed":    false,
-   "num_repetitions":    1
-} 
-``` 
+1. **White matter mask.** Unless you provide one, a white matter mask in diffusion space is made from the FreeSurfer `aparc+aseg` (`create_wm_mask.sh`, FreeSurfer 6.0.1).
+2. **ROIs.** The ROIs are brought into diffusion space; set `reslice` if their dimensions do not match those of the DWI.
+3. **CSD.** Constrained spherical deconvolution is fitted (or the CSD you provide is reused) up to `max_lmax`.
+4. **Tracking.** For each pair in `roiPair`, MRtrix 0.2 `streamtrack SD_PROB` tracks between the two ROIs, by default as an ensemble over all lmax values from 2 to `max_lmax` (`single_lmax` to use only the maximum) and over the curvature values in `curv`, repeated `num_repetitions` times.
+5. **Classification.** The tracks are merged into one `.tck` and a white matter classification (compiled MATLAB), and surface meshes of the FreeSurfer regions are generated for the brainlife.io viewer.
 
-### Sample Datasets 
+## 🚀 Running the App
 
-You can download sample datasets from Brainlife using [Brainlife CLI](https://github.com/brain-life/cli). 
+### ☁️ On brainlife.io
 
+Open the App at [doi.org/10.25663/brainlife.app.279](https://doi.org/10.25663/brainlife.app.279) and choose a `neuro/dwi` dataset, a `neuro/rois` dataset and the subject's FreeSurfer output (used for the white matter mask and the surface overlays). You can also give a CSD, a DWI brain mask and your own white matter mask. Enter the ROI pairs in `roiPair`, one pair per line:
+
+```text
+45 54
+L_FEF_sphere_bin L_PIT_sphere_bin
 ```
-npm install -g brainlife 
-bl login 
-mkdir input 
-bl dataset download 
-``` 
 
-3. Launch the App by executing 'main' 
+A number `N` refers to `rois/ROIN.nii.gz`; a name refers to `rois/<name>.nii.gz`. Set the tracking parameters (`num_fibers`, `max_num`, `stepsize`, `minlength`, `maxlength`, `curv`, `cutoff`, …) and press **Execute**. The App writes a tractogram (`neuro/track/tck`) and a classification (`neuro/wmc`), both tagged `roi2roi`, and the CSD it used (`neuro/csd`). A run can take up to 36 hours.
 
-```bash 
-./main 
-``` 
+### 💻 Locally
 
-## Output 
+You need [Singularity/Apptainer](https://apptainer.org/), [`jq`](https://jqlang.github.io/jq/) and a [FreeSurfer license](https://surfer.nmr.mgh.harvard.edu/registration.html). `main` runs the steps in the `brainlife/freesurfer-mini:6.0.1`, `brainlife/mrtrix3:3.0_RC3`, `brainlife/mrtrix:0.2.13`, `brainlife/mcr:r2019a` and `brainlife/pythonvtk:1.1` containers, so MATLAB is not needed.
 
-The main output of this App is contains the whole-brain tractogram (tck) and the internally computed masks, a white-matter classification structure (wmc), and all of the other derivatives generated. If masks were inputted, the output is simply copies of the inputs. 
+1. Clone this repository and check out the App's branch: `git checkout 1.4`.
+2. Create `config.json` with the paths to your inputs and the tracking options:
 
-#### Product.json 
+   ```json
+   {
+       "dwi": "/input/dwi/dwi.nii.gz",
+       "bvals": "/input/dwi/dwi.bvals",
+       "bvecs": "/input/dwi/dwi.bvecs",
+       "rois": "/input/rois/rois",
+       "freesurfer": "/input/freesurfer/output",
+       "roiPair": "45 54",
+       "num_fibers": 500000,
+       "max_num": 1000000,
+       "stepsize": 0.2,
+       "minlength": 10,
+       "maxlength": 200,
+       "num_repetitions": 1,
+       "curv": "0.25 0.5 1 2 4",
+       "cutoff": 0.1,
+       "max_lmax": "",
+       "single_lmax": false,
+       "multiple_seed": false,
+       "reslice": false
+   }
+   ```
 
-The secondary output of this app is `product.json`. This file allows web interfaces, DB and API calls on the results of the processing. 
+3. Export your FreeSurfer license and run the App:
 
-### Dependencies 
+   ```bash
+   export FREESURFER_LICENSE="$(cat ~/freesurfer/license.txt)"
+   ./main
+   ```
 
-This App requires the following libraries when run locally. 
+### 🧪 Sample data
 
-- MrTrix0.2: https://jdtournier.github.io/mrtrix-0.2/index.html
-- jsonlab: https://github.com/fangq/jsonlab
-- singularity: https://singularity.lbl.gov/quickstart
-- FSL: https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation
-- Matlab: https://www.mathworks.com/help/install/install-products.html
+Download sample ROIs, a FreeSurfer output and a DWI from brainlife.io with the [brainlife CLI](https://github.com/brainlife/cli):
 
+```bash
+npm install -g brainlife
+bl login
+mkdir input
+bl dataset download 5e94beda5092196c60f0c7c9 && mv 5e94beda5092196c60f0c7c9 input/rois
+bl dataset download 5d9ca5863785500776c76e2b && mv 5d9ca5863785500776c76e2b input/freesurfer
+bl dataset download 5e84db45952fef75ac7a246d && mv 5e84db45952fef75ac7a246d input/dwi
+```
+
+## 📦 Outputs
+
+```text
+track/
+└── track.tck               streamlines of all ROI pairs
+wmc/
+└── classification.mat      streamline-to-tract assignment, one tract per ROI pair, with tract and surface files for viewing
+csd/                        CSD FODs (lmax<N>.nii.gz) and response used for tracking
+raw/                        intermediate files
+```
+
+## 🩺 Troubleshooting
+
+- **`failed to create wmc/classification.mat`**: no streamlines were merged into a classification. Check that the `roiPair` names or numbers match files in the `rois` input, and that the ROIs match the DWI dimensions (or set `reslice`).
+- **`Please set FREESURFER_LICENSE in .bashrc`**: no FreeSurfer license is configured. Export it as `FREESURFER_LICENSE`.
+
+## 📚 Citing
+
+> [!TIP]
+> If you use this App in your work, please cite the App, the software it builds on and brainlife.io (below). GitHub's **Cite this repository** button gives the App citation in APA and BibTeX.
+
+- ROI to ROI Tracking - with dtiInit. brainlife.io App. [doi:10.25663/brainlife.app.333](https://doi.org/10.25663/brainlife.app.333)
+- ROI to ROI Tracking - MRTrix 0.2.12. brainlife.io App. [doi:10.25663/brainlife.app.279](https://doi.org/10.25663/brainlife.app.279)
+- Fischl. FreeSurfer. *NeuroImage* 62:774-781 (2012). [doi:10.1016/j.neuroimage.2012.01.021](https://doi.org/10.1016/j.neuroimage.2012.01.021)
+- Tournier et al. MRtrix3: A fast, flexible and open software framework for medical image processing and visualisation. *NeuroImage* 202:116137 (2019). [doi:10.1016/j.neuroimage.2019.116137](https://doi.org/10.1016/j.neuroimage.2019.116137)
+- Hayashi S, Caron BA, Heinsfeld AS, et al. brainlife.io: a decentralized and open-source cloud platform to support neuroscience research. *Nature Methods* 21:809–813 (2024). [doi:10.1038/s41592-024-02237-2](https://doi.org/10.1038/s41592-024-02237-2)
+- Avesani P, McPherson B, Hayashi S, et al. The open diffusion data derivatives, brain data upcycling via integrated publishing of derivatives and reproducible open cloud services. *Scientific Data* 6:69 (2019). [doi:10.1038/s41597-019-0073-y](https://doi.org/10.1038/s41597-019-0073-y)
+
+## 👥 Authors
+
+- Franco Pestilli (project director)
+- Brad Caron
+- Ilaria Sani
+
+**Contributors:** Soichi Hayashi
+
+## 💰 Funding
+
+[![Wellcome-226486/Z/22/Z](https://img.shields.io/badge/Wellcome-226486%2FZ%2F22%2FZ-purple.svg)](https://wellcome.org/)
+[![NIH-NINDS-U24NS140384](https://img.shields.io/badge/NIH_NINDS-U24NS140384-green.svg)](https://reporter.nih.gov/project-details/11261037)
+[![NIH-NINDS-UM1NS132207](https://img.shields.io/badge/NIH_NINDS-UM1NS132207-green.svg)](https://reporter.nih.gov/project-details/11411328)
+[![NIH-NIBIB-R01EB029272](https://img.shields.io/badge/NIH_NIBIB-R01EB029272-green.svg)](https://reporter.nih.gov/project-details/10262925)
+[![NIH-NIBIB-R01EB030896](https://img.shields.io/badge/NIH_NIBIB-R01EB030896-green.svg)](https://reporter.nih.gov/project-details/10428625)
+[![NIH-NIMH-R01MH126699](https://img.shields.io/badge/NIH_NIMH-R01MH126699-green.svg)](https://reporter.nih.gov/project-details/10460628)
+[![NIH-NIDCD-R01DC020088](https://img.shields.io/badge/NIH_NIDCD-R01DC020088-green.svg)](https://reporter.nih.gov/project-details/11140284)
+[![NSF-BCS-1734853](https://img.shields.io/badge/NSF_BCS-1734853-blue.svg)](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1734853)
+[![NSF-BCS-2203524](https://img.shields.io/badge/NSF_BCS-2203524-blue.svg)](https://www.nsf.gov/awardsearch/showAward?AWD_ID=2203524)
+[![NSF-IIS-1636893](https://img.shields.io/badge/NSF_IIS-1636893-blue.svg)](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1636893)
+[![NSF-OAC-2148729](https://img.shields.io/badge/NSF_OAC-2148729-blue.svg)](https://www.nsf.gov/awardsearch/showAward?AWD_ID=2148729)
+[![NSF-IIS-1912270](https://img.shields.io/badge/NSF_IIS-1912270-blue.svg)](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1912270)
+[![NSF-IIS-2148700](https://img.shields.io/badge/NSF_IIS-2148700-blue.svg)](https://www.nsf.gov/awardsearch/showAward?AWD_ID=2148700)
+[![NSF-OAC-1916518](https://img.shields.io/badge/NSF_OAC-1916518-blue.svg)](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1916518)
+
+<sub>brainlife.io is publicly funded, and acknowledging that support helps keep it running. This App was developed with support from Wellcome, the U.S. National Institutes of Health (including the BRAIN Initiative BRAIN CONNECTS program: The Axonal Projectome EXchange, U24NS140384, and the Center for Mesoscale Connectomics, UM1NS132207) and the U.S. National Science Foundation.</sub>
+
+## ⚖️ License
+
+[MIT](https://github.com/brainlife/app-roi2roitracking/blob/1.4/LICENSE). The App also uses [vistasoft](https://github.com/vistalab/vistasoft), [encode](https://github.com/brainlife/encode), [wma](https://github.com/brainlife/wma) and [jsonlab](https://github.com/fangq/jsonlab), each under its own license; MRtrix and FreeSurfer are distributed under their own licenses.
